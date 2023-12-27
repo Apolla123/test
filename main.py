@@ -9,8 +9,13 @@ class CoffeeApp(QMainWindow):
         super().__init__()
 
         self.ui = uic.loadUi('main.ui', self)
+        self.add_edit_form = uic.loadUi('addEditCoffeeForm.ui', self)
+
+        self.add_edit_form.save_button.clicked.connect(self.save_coffee_info)
+        self.add_edit_form.show()
 
         self.setWindowTitle("Кофе")
+        self.setGeometry(100, 100, 300, 300)
 
         self.centralWidget = QWidget(self)
         self.setCentralWidget(self.centralWidget)
@@ -36,7 +41,7 @@ class CoffeeApp(QMainWindow):
         connection = sqlite3.connect('coffee.sqlite')
         cursor = connection.cursor()
 
-        cursor.execute("SELECT * FROM coffe")
+        cursor.execute("SELECT * FROM coffee")
 
         coffee_info = []
         for row in cursor.fetchall():
@@ -61,6 +66,34 @@ class CoffeeApp(QMainWindow):
                 self.ui.taste_label.setText(f"Описание вкуса: {info['Описание вкуса']}")
                 self.ui.price_label.setText(f"Цена: {info['Цена']}")
                 self.ui.volume_label.setText(f"Объем упаковки: {info['Объем упаковки']}")
+
+    def save_coffee_info(self):
+        # Получить данные из формы добавления/редактирования
+        id = self.add_edit_form.id_lineedit.text()
+        name = self.add_edit_form.name_lineedit.text()
+        roast = self.add_edit_form.roast_combobox.currentText()
+        grind = self.add_edit_form.grind_combobox.currentText()
+        taste = self.add_edit_form.taste_lineedit.text()
+        price = self.add_edit_form.price_lineedit.text()
+        volume = self.add_edit_form.volume_lineedit.text()
+
+        # Добавить или обновить запись о кофе в базе данных
+        connection = sqlite3.connect('coffee.sqlite')
+        cursor = connection.cursor()
+        if not id:  # Если id не указан, значит создаем новую запись
+            cursor.execute("INSERT INTO Coffee VALUES (NULL, ?, ?, ?, ?, ?, ?)",
+                           (name, roast, grind, taste, price, volume))
+        else:  # Если id указан, значит обновляем существующую запись
+            cursor.execute(
+                "UPDATE Coffee SET `Название сорта` = ?, `Степень обжарки` = ?, `Молотый/в зернах` = ?, `Описание вкуса` = ?, `Цена` = ?, `Объем упаковки` = ? WHERE ID = ?",
+                (name, roast, grind, taste, price, volume, id))
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        # Обновить информацию о кофе на главной форме
+        self.update_coffee_info()
+        self.add_edit_form.close()
 
 
 if __name__ == "__main__":
